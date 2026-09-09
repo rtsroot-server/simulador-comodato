@@ -174,10 +174,11 @@
         </div>
     </div>
 
-    <!-- O segredo da automação do Wagner -->
+    <!-- O segredo da automação robusto -->
     <script>
-        const mapaVinculos = {{ mapa_vinculos|safe }};
-        const todosInsumos = {{ insumos|safe }};
+        // O comando |tojson resolve qualquer problema de caracteres especiais!
+        const mapaVinculos = {{ mapa_vinculos | tojson }};
+        const todosInsumos = {{ insumos | tojson }};
 
         function atualizarFiltros() {
             const selectsEquipamentos = document.querySelectorAll('.select-equipamento');
@@ -189,12 +190,15 @@
             let insumosPermitidos = new Set();
             if (equipamentosAtuais.length > 0) {
                 equipamentosAtuais.forEach(eq => {
-                    if(mapaVinculos[eq]) {
+                    // Segurança caso a máquina não esteja no mapa
+                    if(mapaVinculos && mapaVinculos[eq]) {
                         mapaVinculos[eq].forEach(ins => insumosPermitidos.add(ins));
                     }
                 });
             } else {
-                todosInsumos.forEach(ins => insumosPermitidos.add(ins));
+                if(todosInsumos) {
+                    todosInsumos.forEach(ins => insumosPermitidos.add(ins));
+                }
             }
 
             const selectsInsumos = document.querySelectorAll('.select-insumo');
@@ -259,7 +263,6 @@
             container.appendChild(row);
         }
 
-        // Garante que o filtro rode na primeira carga da página
         window.onload = atualizarFiltros;
     </script>
 </body>
