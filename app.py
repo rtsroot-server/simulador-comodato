@@ -2,7 +2,6 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Nosso "Mini Banco de Dados" com os custos reais (seguros no backend)
 EQUIPAMENTOS = {
     "BOMBA EP-90PRO": 2677.50,
     "BOMBA HP 60": 2142.00,
@@ -32,37 +31,61 @@ def index():
     resultado = None
     
     if request.method == 'POST':
-        # 1. Puxando os NOMES que o vendedor selecionou na tela
-        nome_equipamento = request.form['equipamento']
-        nome_insumo = request.form['insumo']
+        equipamentos_selecionados = request.form.getlist('equipamento[]')
+        qtds_equipamentos = request.form.getlist('qtd_equipamentos[]')
         
-        # 2. Buscando automaticamente os CUSTOS no nosso "banco de dados" acima
-        custo_equipamento = EQUIPAMENTOS[nome_equipamento]
-        custo_insumo = INSUMOS[nome_insumo]
+        insumos_selecionados = request.form.getlist('insumo[]')
+        qtds_insumos = request.form.getlist('qtd_insumos[]')
         
-        # 3. Puxando as quantidades digitadas
-        qtd_equipamentos = float(request.form['qtd_equipamentos'])
         tempo_contrato = float(request.form['tempo_contrato'])
-        qtd_insumos = float(request.form['qtd_insumos'])
         margem_lucro = float(request.form['margem_lucro'])
         
-        # 4. Fazendo a matemática da diluição
-        custo_total_equipamentos = qtd_equipamentos * custo_equipamento
+        # 1. Somando o custo de TODAS as bombas
+        custo_total_equipamentos = 0
+        for i in range(len(equipamentos_selecionados)):
+            nome_eq = equipamentos_selecionados[i]
+            qtd_eq = float(qtds_equipamentos[i])
+            custo_total_equipamentos += (qtd_eq * EQUIPAMENTOS[nome_eq])
+            
         custo_mensal_equipamentos = custo_total_equipamentos / tempo_contrato
         
-        fator_comodato = custo_mensal_equipamentos / qtd_insumos
-        custo_com_fc = custo_insumo + fator_comodato
-        preco_venda_final = custo_com_fc * (1 + (margem_lucro / 100))
+        # 2. Somando a quantidade de TODOS os insumos para diluição
+        qtd_total_insumos = sum([float(qtd) for qtd in qtds_insumos])
         
-        # 5. Organizando o resultado para mandar para a tela
+        # 3. Fator de Comodato (FC)
+        fator_comodato = 0
+        if qtd_total_insumos > 0:
+            fator_comodato = custo_mensal_equipamentos / qtd_total_insumos
+            
+        # 4. NOVA MATEMÁTICA: Markup apenas no Insumo!
+        detalhes_insumos = []
+        for i in range(len(insumos_selecionados)):
+            nome_ins = insumos_selecionados[i]
+            qtd_ins = float(qtds_insumos[i])
+            custo_base = INSUMOS[nome_ins]
+            
+            # Aplica a margem SÓ no custo do equipo
+            preco_com_markup = custo_base * (1 + (margem_lucro / 100))
+            
+            # Soma o Fator Comodato depois da margem (apenas repasse de custo)
+            preco_venda = preco_com_markup + fator_comodato
+            
+            detalhes_insumos.append({
+                'nome': nome_ins,
+                'qtd': qtd_ins,
+                'custo_base': custo_base,
+                'preco_com_markup': round(preco_com_markup, 2),
+                'preco_venda': round(preco_venda, 2)
+            })
+            
         resultado = {
-            'equipamento_escolhido': nome_equipamento,
-            'insumo_escolhido': nome_insumo,
-            'custo_equip_oculto': custo_equipamento,
-            'custo_insumo_oculto': custo_insumo,
+            'custo_total_equipamentos': round(custo_total_equipamentos, 2),
+            'custo_mensal_equipamentos': round(custo_mensal_equipamentos, 2),
+            'qtd_total_insumos': round(qtd_total_insumos, 2),
             'fator_comodato': round(fator_comodato, 4),
-            'custo_com_fc': round(custo_com_fc, 2),
-            'preco_venda_final': round(preco_venda_final, 2)
+            'detalhes_insumos': detalhes_insumos,
+            'margem_lucro': margem_lucro,
+            'tempo_contrato': tempo_contrato
         }
         
     return render_template('index.html', equipamentos=EQUIPAMENTOS, insumos=INSUMOS, resultado=resultado)
