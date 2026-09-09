@@ -57,26 +57,36 @@ def index():
         if qtd_total_insumos > 0:
             fator_comodato = custo_mensal_equipamentos / qtd_total_insumos
             
-        # 4. NOVA MATEMÁTICA: Markup apenas no Insumo!
+        # 4. Cálculo de Preços e Faturamentos
         detalhes_insumos = []
+        faturamento_mensal_total = 0
+        custo_mensal_insumos_total = 0
+        
         for i in range(len(insumos_selecionados)):
             nome_ins = insumos_selecionados[i]
             qtd_ins = float(qtds_insumos[i])
             custo_base = INSUMOS[nome_ins]
             
-            # Aplica a margem SÓ no custo do equipo
             preco_com_markup = custo_base * (1 + (margem_lucro / 100))
-            
-            # Soma o Fator Comodato depois da margem (apenas repasse de custo)
             preco_venda = preco_com_markup + fator_comodato
+            
+            # Novos cálculos do Wagner
+            faturamento_mensal_item = preco_venda * qtd_ins
+            custo_mensal_insumo = custo_base * qtd_ins
+            
+            faturamento_mensal_total += faturamento_mensal_item
+            custo_mensal_insumos_total += custo_mensal_insumo
             
             detalhes_insumos.append({
                 'nome': nome_ins,
                 'qtd': qtd_ins,
-                'custo_base': custo_base,
+                'custo_base': round(custo_base, 2),
                 'preco_com_markup': round(preco_com_markup, 2),
-                'preco_venda': round(preco_venda, 2)
+                'preco_venda': round(preco_venda, 2),
+                'faturamento_mensal': round(faturamento_mensal_item, 2)
             })
+            
+        faturamento_contrato_total = faturamento_mensal_total * tempo_contrato
             
         resultado = {
             'custo_total_equipamentos': round(custo_total_equipamentos, 2),
@@ -84,6 +94,8 @@ def index():
             'qtd_total_insumos': round(qtd_total_insumos, 2),
             'fator_comodato': round(fator_comodato, 4),
             'detalhes_insumos': detalhes_insumos,
+            'faturamento_mensal_total': round(faturamento_mensal_total, 2),
+            'faturamento_contrato_total': round(faturamento_contrato_total, 2),
             'margem_lucro': margem_lucro,
             'tempo_contrato': tempo_contrato
         }
