@@ -46,10 +46,9 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Margem de Lucro Equipos (Markup %)</label>
+                                <label class="form-label">Margem de Lucro Insumos (Markup %)</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-graph-up-arrow"></i></span>
-                                    <!-- A margem continua aceitando decimais (ex: 75.5%) -->
                                     <input type="number" step="0.01" class="form-control" name="margem_lucro" required>
                                 </div>
                             </div>
@@ -63,12 +62,13 @@
                             <div class="row mb-2 equipamento-item">
                                 <div class="col-md-8 mb-2">
                                     <select class="form-select" name="equipamento[]" required>
-                                        <option value="" disabled selected>Selecione a bomba...</option>
+                                        <option value="" disabled selected>Selecione a máquina...</option>
                                         {% for eq in equipamentos %}<option value="{{ eq }}">{{ eq }}</option>{% endfor %}
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <input type="number" step="1" class="form-control" name="qtd_equipamentos[]" placeholder="Qtd. Bombas" required>
+                                    <!-- Apenas inteiros -->
+                                    <input type="number" step="1" class="form-control" name="qtd_equipamentos[]" placeholder="Qtd." required>
                                 </div>
                             </div>
                         </div>
@@ -77,17 +77,18 @@
                         
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="text-primary m-0"><i class="bi bi-bandaid me-2"></i>Insumos Vinculados</h5>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addInsumo()">+ Adicionar Equipo</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addInsumo()">+ Adicionar Insumo</button>
                         </div>
                         <div id="insumos-container">
                             <div class="row mb-2 insumo-item">
                                 <div class="col-md-8 mb-2">
                                     <select class="form-select" name="insumo[]" required>
-                                        <option value="" disabled selected>Selecione o equipo...</option>
+                                        <option value="" disabled selected>Selecione o insumo...</option>
                                         {% for ins in insumos %}<option value="{{ ins }}">{{ ins }}</option>{% endfor %}
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-2">
+                                    <!-- Apenas inteiros -->
                                     <input type="number" step="1" class="form-control" name="qtd_insumos[]" placeholder="Qtd. Mensal" required>
                                 </div>
                             </div>
@@ -158,7 +159,7 @@
                             </div>
                             <div class="col-md-6">
                                 <ul class="list-unstyled mb-0">
-                                    <li><strong>4. Volume Total de Equipos/Mês:</strong> {{ resultado.qtd_total_insumos }} unidades</li>
+                                    <li><strong>4. Volume Total de Insumos/Mês:</strong> {{ resultado.qtd_total_insumos }} unidades</li>
                                     <li><strong>5. FC Unitário (Linha 3 ÷ Linha 4):</strong> <span class="text-warning fw-bold">R$ {{ resultado.fator_comodato }}</span></li>
                                 </ul>
                             </div>
@@ -179,12 +180,12 @@
             row.innerHTML = `
                 <div class="col-md-8 mb-2">
                     <select class="form-select" name="equipamento[]" required>
-                        <option value="" disabled selected>Selecione a bomba...</option>
+                        <option value="" disabled selected>Selecione a máquina...</option>
                         {% for eq in equipamentos %}<option value="{{ eq }}">{{ eq }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3 mb-2">
-                    <input type="number" step="1" class="form-control" name="qtd_equipamentos[]" placeholder="Qtd" required>
+                    <input type="number" step="1" class="form-control" name="qtd_equipamentos[]" placeholder="Qtd." required>
                 </div>
                 <div class="col-md-1 mb-2">
                     <button type="button" class="btn btn-outline-danger w-100" onclick="this.parentElement.parentElement.remove()">X</button>
@@ -200,12 +201,12 @@
             row.innerHTML = `
                 <div class="col-md-8 mb-2">
                     <select class="form-select" name="insumo[]" required>
-                        <option value="" disabled selected>Selecione o equipo...</option>
+                        <option value="" disabled selected>Selecione o insumo...</option>
                         {% for ins in insumos %}<option value="{{ ins }}">{{ ins }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3 mb-2">
-                    <input type="number" step="1" class="form-control" name="qtd_insumos[]" placeholder="Qtd Mensal" required>
+                    <input type="number" step="1" class="form-control" name="qtd_insumos[]" placeholder="Qtd. Mensal" required>
                 </div>
                 <div class="col-md-1 mb-2">
                     <button type="button" class="btn btn-outline-danger w-100" onclick="this.parentElement.parentElement.remove()">X</button>
