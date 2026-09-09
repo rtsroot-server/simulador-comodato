@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request
+import json
 
 app = Flask(__name__)
 
-# Dados extraídos da planilha oficial "planilha_precos (2).xlsx"
+# Dados oficiais extraídos do sistema MedCaptain
 EQUIPAMENTOS = {
     "BOMBA DE SERINGA AP-30 MEDCAPTAIN": 2926.51,
     "BOMBA DE INFUSÃO AP-60 MEDCAPTAIN": 2926.51,
@@ -62,6 +63,22 @@ INSUMOS = {
     "EQUIPO PARENTERAL MEDCAPTAIN PVC FREE TS-1 MX/50": 12.81
 }
 
+# Criando Dicionário de Vínculos Inteligentes
+MAPA_VINCULOS = {}
+for eq in EQUIPAMENTOS.keys():
+    compatibilidade = []
+    if 'HP-60' in eq or 'HP 60' in eq: kw = ['HP-60', 'HP 60', 'TS-1', 'JMB', 'BPQ']
+    elif 'EP-90' in eq or 'EP 90' in eq: kw = ['EP-90', 'EP 90']
+    elif 'EP-60' in eq or 'EP 60' in eq: kw = ['EP-60', 'EP 60', 'E112E']
+    elif 'VIDEOLARINGO' in eq: kw = ['LAMINA']
+    elif 'TVP' in eq: kw = ['PERNEIRA']
+    else: kw = ['EQUIPO', 'SENSOR'] # Genéricos para MP/AP/Estações
+
+    for ins in INSUMOS.keys():
+        if any(k in ins for k in kw):
+            compatibilidade.append(ins)
+    MAPA_VINCULOS[eq] = compatibilidade if compatibilidade else list(INSUMOS.keys())
+
 def formatar_brl(valor, decimais=2):
     if valor is None:
         return "0,00"
@@ -75,26 +92,29 @@ def index():
     if request.method == 'POST':
         equipamentos_selecionados = request.form.getlist('equipamento[]')
         qtds_equipamentos = request.form.getlist('qtd_equipamentos[]')
-        
         insumos_selecionados = request.form.getlist('insumo[]')
         qtds_insumos = request.form.getlist('qtd_insumos[]')
         
+        # Novos campos de prazo
+        tempo_depreciacao = int(float(request.form['tempo_depreciacao']))
         tempo_contrato = int(float(request.form['tempo_contrato']))
         margem_lucro = float(request.form['margem_lucro'])
         
+        # 1. Custo das máquinas
         custo_total_equipamentos = 0
         for i in range(len(equipamentos_selecionados)):
             nome_eq = equipamentos_selecionados[i]
             qtd_eq = int(float(qtds_equipamentos[i]))
             custo_total_equipamentos += (qtd_eq * EQUIPAMENTOS[nome_eq])
             
-        custo_mensal_equipamentos = custo_total_equipamentos / tempo_contrato
-        qtd_total_insumos = sum([int(float(qtd)) for qtd in qtds_insumos])
+        # 2. Nova Matemática: Diluição pelo tempo de DEPRECIAÇÃO
+        custo_mensal_equipamentos = custo_total_equipamentos / tempo_depreciacao
         
-        fator_comodato = 0
-        if qtd_total_insumos > 0:
-            fator_comodato = custo_mensal_equipamentos / qtd_total_insumos
+        # 3. Fator Comodato (FC)
+        qtd_total_insumos = sum([int(float(qtd)) for qtd in qtds_insumos])
+        fator_comodato = custo_mensal_equipamentos / qtd_total_insumos if qtd_total_insumos > 0 else 0
             
+        # 4. Faturamento
         detalhes_insumos = []
         faturamento_mensal_total = 0
         
@@ -113,13 +133,12 @@ def index():
                 'nome': nome_ins,
                 'qtd': qtd_ins,
                 'custo_base': formatar_brl(custo_base),
-                'preco_com_markup': formatar_brl(preco_com_markup),
                 'preco_venda': formatar_brl(preco_venda),
                 'faturamento_mensal': formatar_brl(faturamento_mensal_item)
             })
             
+        # O Contrato usa o Tempo de Contrato apenas para o cálculo macro (VGV)
         faturamento_contrato_total = faturamento_mensal_total * tempo_contrato
-        margem_exibicao = f"{margem_lucro:g}".replace('.', ',')
             
         resultado = {
             'custo_total_equipamentos': formatar_brl(custo_total_equipamentos),
@@ -129,11 +148,14 @@ def index():
             'detalhes_insumos': detalhes_insumos,
             'faturamento_mensal_total': formatar_brl(faturamento_mensal_total),
             'faturamento_contrato_total': formatar_brl(faturamento_contrato_total),
-            'margem_lucro': margem_exibicao,
-            'tempo_contrato': tempo_contrato
+            'margem_lucro': f"{margem_lucro:g}".replace('.', ','),
+            'tempo_contrato': tempo_contrato,
+            'tempo_depreciacao': tempo_depreciacao
         }
         
-    return render_template('index.html', equipamentos=EQUIPAMENTOS, insumos=INSUMOS, resultado=resultado)
+    return render_template('index.html', equipamentos=list(EQUIPAMENTOS.keys()), 
+                           insumos=list(INSUMOS.keys()), mapa_vinculos=json.dumps(MAPA_VINCULOS), 
+                           resultado=resultado)
 
 if __name__ == '__main__':
     app.run(debug=True)
