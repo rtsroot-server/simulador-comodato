@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request
-import json
 
 app = Flask(__name__)
 
@@ -95,26 +94,21 @@ def index():
         insumos_selecionados = request.form.getlist('insumo[]')
         qtds_insumos = request.form.getlist('qtd_insumos[]')
         
-        # Novos campos de prazo
         tempo_depreciacao = int(float(request.form['tempo_depreciacao']))
         tempo_contrato = int(float(request.form['tempo_contrato']))
         margem_lucro = float(request.form['margem_lucro'])
         
-        # 1. Custo das máquinas
         custo_total_equipamentos = 0
         for i in range(len(equipamentos_selecionados)):
             nome_eq = equipamentos_selecionados[i]
             qtd_eq = int(float(qtds_equipamentos[i]))
             custo_total_equipamentos += (qtd_eq * EQUIPAMENTOS[nome_eq])
             
-        # 2. Nova Matemática: Diluição pelo tempo de DEPRECIAÇÃO
         custo_mensal_equipamentos = custo_total_equipamentos / tempo_depreciacao
-        
-        # 3. Fator Comodato (FC)
         qtd_total_insumos = sum([int(float(qtd)) for qtd in qtds_insumos])
+        
         fator_comodato = custo_mensal_equipamentos / qtd_total_insumos if qtd_total_insumos > 0 else 0
             
-        # 4. Faturamento
         detalhes_insumos = []
         faturamento_mensal_total = 0
         
@@ -137,7 +131,6 @@ def index():
                 'faturamento_mensal': formatar_brl(faturamento_mensal_item)
             })
             
-        # O Contrato usa o Tempo de Contrato apenas para o cálculo macro (VGV)
         faturamento_contrato_total = faturamento_mensal_total * tempo_contrato
             
         resultado = {
@@ -153,8 +146,11 @@ def index():
             'tempo_depreciacao': tempo_depreciacao
         }
         
-    return render_template('index.html', equipamentos=list(EQUIPAMENTOS.keys()), 
-                           insumos=list(INSUMOS.keys()), mapa_vinculos=json.dumps(MAPA_VINCULOS), 
+    # Enviando os dados limpos para o Javascript
+    return render_template('index.html', 
+                           equipamentos=list(EQUIPAMENTOS.keys()), 
+                           insumos=list(INSUMOS.keys()), 
+                           mapa_vinculos=MAPA_VINCULOS, 
                            resultado=resultado)
 
 if __name__ == '__main__':
