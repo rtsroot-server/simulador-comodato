@@ -26,6 +26,15 @@ INSUMOS = {
     "E112E - Equipo EP 60": 6.58
 }
 
+# Função para converter números para o formato financeiro brasileiro
+def formatar_brl(valor, decimais=2):
+    if valor is None:
+        return "0,00"
+    # Formata com padrão americano primeiro (ex: 1,234.56)
+    v_str = f"{valor:,.{decimais}f}"
+    # Troca as vírgulas e pontos para o padrão BR (ex: 1.234,56)
+    return v_str.replace(',', 'X').replace('.', ',').replace('X', '.')
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     resultado = None
@@ -37,20 +46,23 @@ def index():
         insumos_selecionados = request.form.getlist('insumo[]')
         qtds_insumos = request.form.getlist('qtd_insumos[]')
         
-        tempo_contrato = float(request.form['tempo_contrato'])
+        # Converte para inteiro (remove o .0 visual)
+        tempo_contrato = int(float(request.form['tempo_contrato']))
+        # Margem pode ter decimal, mas formatamos para exibir bonito
         margem_lucro = float(request.form['margem_lucro'])
         
         # 1. Somando o custo de TODAS as bombas
         custo_total_equipamentos = 0
         for i in range(len(equipamentos_selecionados)):
             nome_eq = equipamentos_selecionados[i]
-            qtd_eq = float(qtds_equipamentos[i])
+            # Quantidade forçada como Inteiro
+            qtd_eq = int(float(qtds_equipamentos[i]))
             custo_total_equipamentos += (qtd_eq * EQUIPAMENTOS[nome_eq])
             
         custo_mensal_equipamentos = custo_total_equipamentos / tempo_contrato
         
-        # 2. Somando a quantidade de TODOS os insumos para diluição
-        qtd_total_insumos = sum([float(qtd) for qtd in qtds_insumos])
+        # 2. Somando a quantidade de TODOS os insumos para diluição (como inteiro)
+        qtd_total_insumos = sum([int(float(qtd)) for qtd in qtds_insumos])
         
         # 3. Fator de Comodato (FC)
         fator_comodato = 0
@@ -60,43 +72,41 @@ def index():
         # 4. Cálculo de Preços e Faturamentos
         detalhes_insumos = []
         faturamento_mensal_total = 0
-        custo_mensal_insumos_total = 0
         
         for i in range(len(insumos_selecionados)):
             nome_ins = insumos_selecionados[i]
-            qtd_ins = float(qtds_insumos[i])
+            qtd_ins = int(float(qtds_insumos[i])) # Quantidade inteira
             custo_base = INSUMOS[nome_ins]
             
             preco_com_markup = custo_base * (1 + (margem_lucro / 100))
             preco_venda = preco_com_markup + fator_comodato
             
-            # Novos cálculos do Wagner
             faturamento_mensal_item = preco_venda * qtd_ins
-            custo_mensal_insumo = custo_base * qtd_ins
-            
             faturamento_mensal_total += faturamento_mensal_item
-            custo_mensal_insumos_total += custo_mensal_insumo
             
             detalhes_insumos.append({
                 'nome': nome_ins,
                 'qtd': qtd_ins,
-                'custo_base': round(custo_base, 2),
-                'preco_com_markup': round(preco_com_markup, 2),
-                'preco_venda': round(preco_venda, 2),
-                'faturamento_mensal': round(faturamento_mensal_item, 2)
+                'custo_base': formatar_brl(custo_base),
+                'preco_com_markup': formatar_brl(preco_com_markup),
+                'preco_venda': formatar_brl(preco_venda),
+                'faturamento_mensal': formatar_brl(faturamento_mensal_item)
             })
             
         faturamento_contrato_total = faturamento_mensal_total * tempo_contrato
+        
+        # Formatando % de lucro (tira o .0 se for inteiro)
+        margem_exibicao = f"{margem_lucro:g}".replace('.', ',')
             
         resultado = {
-            'custo_total_equipamentos': round(custo_total_equipamentos, 2),
-            'custo_mensal_equipamentos': round(custo_mensal_equipamentos, 2),
-            'qtd_total_insumos': round(qtd_total_insumos, 2),
-            'fator_comodato': round(fator_comodato, 4),
+            'custo_total_equipamentos': formatar_brl(custo_total_equipamentos),
+            'custo_mensal_equipamentos': formatar_brl(custo_mensal_equipamentos),
+            'qtd_total_insumos': qtd_total_insumos, # Inteiro limpo
+            'fator_comodato': formatar_brl(fator_comodato, 4), # Mantém 4 casas no FC, mas com vírgula
             'detalhes_insumos': detalhes_insumos,
-            'faturamento_mensal_total': round(faturamento_mensal_total, 2),
-            'faturamento_contrato_total': round(faturamento_contrato_total, 2),
-            'margem_lucro': margem_lucro,
+            'faturamento_mensal_total': formatar_brl(faturamento_mensal_total),
+            'faturamento_contrato_total': formatar_brl(faturamento_contrato_total),
+            'margem_lucro': margem_exibicao,
             'tempo_contrato': tempo_contrato
         }
         
